@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Chief Actuary Challenge - Income Bridge</title>
+    <style>
+        :root {
+            --primary: #0f4c81;
+            --accent: #f58220;
+            --dark: #1a1a1a;
+            --light: #f4f6f9;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--light);
+            color: var(--dark);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: var(--primary);
+            text-align: center;
+            margin-bottom: 5px;
+        }
+        h3 {
+            text-align: center;
+            color: #666;
+            margin-top: 0;
+            font-weight: 400;
+        }
+        .intro-box {
+            background-color: #ebf3f9;
+            border-left: 5px solid var(--primary);
+            padding: 15px;
+            margin-bottom: 25px;
+            border-radius: 0 8px 8px 0;
+        }
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+        @media (max-width: 768px) {
+            .dashboard { grid-template-columns: 1fr; }
+        }
+        .panel {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 8px;
+            background: #fff;
+        }
+        .panel h2 {
+            margin-top: 0;
+            color: var(--primary);
+            border-bottom: 2px solid #eee;
+            padding-bottom: 8px;
+        }
+        .slider-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--primary);
+        }
+        .slider-val {
+            font-weight: bold;
+            color: var(--accent);
+            float: right;
+        }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn:hover { background: #0c3a66; }
+        .btn-reset {
+            background: #888;
+            margin-top: 10px;
+        }
+        .btn-reset:hover { background: #666; }
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .stat-card {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+            border: 1px solid #eee;
+        }
+        .stat-card .num {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        .stat-card.alert {
+            background: #fde8e7;
+            border-color: var(--danger);
+        }
+        .stat-card.alert .num {
+            color: var(--danger);
+        }
+        .log-box {
+            height: 150px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+            background: #222;
+            color: #fff;
+            font-family: monospace;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🎮 The Chief Actuary Challenge</h1>
+    <h3>Can you keep "The Income Bridge" solvent for 12 months?</h3>
+
+    <div class="intro-box">
+        <strong>The Scenario:</strong> You are managing an insurance pool of <strong>100 workers</strong> earning Hong Kong's median salary of <strong>HK$22,000/month</strong>. Adjust your pricing and benefit policies below, then click "Simulate Month" to test your fund's resilience against realistic economic events!
+    </div>
+
+    <div class="dashboard">
+        <!-- Controls Panel -->
+        <div class="panel">
+            <h2>⚙️ Policy Controls</h2>
+            
+            <div class="slider-group">
+                <label>Monthly Premium Rate: <span class="slider-val" id="premiumVal">4.0%</span></label>
+                <input type="range" id="premiumSlider" min="1.0" max="8.0" step="0.5" value="4.0">
+                <small style="color:#777;">Employee + Employer combined rate. (4% of $22,000 = $880/mo)</small>
+            </div>
+
+            <div class="slider-group">
+                <label>Benefit Payout Ratio: <span class="slider-val" id="benefitVal">60%</span></label>
+                <input type="range" id="benefitSlider" min="40" max="80" step="5" value="60">
+                <small style="color:#777;">Percentage of salary replaced. (60% = $13,200/mo payout)</small>
+            </div>
+
+            <div class="slider-group">
+                <label>Waiting Gate (Months): <span class="slider-val" id="gateVal">3</span></label>
+                <input type="range" id="gateSlider" min="1" max="6" step="1" value="3">
+                <small style="color:#777;">Minimum employment duration before a claim is allowed.</small>
+            </div>
+
+            <button class="btn" id="simBtn">🚀 Simulate Month</button>
+            <button class="btn btn-reset" id="resetBtn">🔄 Restart Simulation</button>
+        </div>
+
+        <!-- Real-time Stats & Log -->
+        <div class="panel">
+            <h2>📊 Fund Ledger</h2>
+            
+            <div class="stats">
+                <div class="stat-card">
+                    <div>Current Month</div>
+                    <div class="num" id="currMonth">0 / 12</div>
+                </div>
+                <div class="stat-card" id="reserveCard">
+                    <div>Reserve Capital</div>
+                    <div class="num" id="reserves">HK$100,000</div>
+                </div>
+                <div class="stat-card">
+                    <div>Total Premiums Collected</div>
+                    <div class="num" id="totalPrems">HK$0</div>
+                </div>
+                <div class="stat-card">
+                    <div>Total Payouts Made</div>
+                    <div class="num" id="totalClaims">HK$0</div>
+                </div>
+            </div>
+
+            <h3 style="text-align:left; margin-top:20px; font-size:16px; color: var(--primary);">📋 Actuarial Live Feed</h3>
+            <div class="log-box" id="log"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Game variables
+    let month = 0;
+    let reserves = 100000;
+    let totalPremiums = 0;
+    let totalClaims = 0;
+    const poolSize = 100;
+    const medianSalary = 22000;
+    let isGameOver = false;
+
+    // DOM Elements
+    const premiumSlider = document.getElementById('premiumSlider');
+    const premiumVal = document.getElementById('premiumVal');
+    const benefitSlider = document.getElementById('benefitSlider');
+    const benefitVal = document.getElementById('benefitVal');
+    const gateSlider = document.getElementById('gateSlider');
+    const gateVal = document.getElementById('gateVal');
+    const simBtn = document.getElementById('simBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    
+    const currMonthText = document.getElementById('currMonth');
+    const reservesText = document.getElementById('reserves');
+    const totalPremsText = document.getElementById('totalPrems');
+    const totalClaimsText = document.getElementById('totalClaims');
+    const logBox = document.getElementById('log');
+    const reserveCard = document.getElementById('reserveCard');
+
+    // Update Sliders
+    premiumSlider.oninput = () => premiumVal.innerText = premiumSlider.value + "%";
+    benefitSlider.oninput = () => benefitVal.innerText = benefitSlider.value + "%";
+    gateSlider.oninput = () => gateVal.innerText = gateSlider.value;
+
+    function log(message) {
+        logBox.innerHTML += `> ${message}<br>`;
+        logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    // Helper to simulate binomial trials
+    function simulateClaims(n, p) {
+        let claims = 0;
+        for (let i = 0; i < n; i++) {
+            if (Math.random() < p) {
+                claims++;
+            }
+        }
+        return claims;
+    }
+
+    // Reset Game
+    function resetGame() {
+        month = 0;
+        reserves = 100000;
+        totalPremiums = 0;
+        totalClaims = 0;
+        isGameOver = false;
+        simBtn.disabled = false;
+        reserveCard.classList.remove('alert');
+        logBox.innerHTML = "";
+        updateDisplay();
+        log("Game started. Starting Reserve: HK$100,000. Underwrite carefully!");
+    }
+
+    function updateDisplay() {
+        currMonthText.innerText = `${month} / 12`;
+        reservesText.innerText = `HK$${reserves.toLocaleString()}`;
+        totalPremsText.innerText = `HK$${totalPremiums.toLocaleString()}`;
+        totalClaimsText.innerText = `HK$${totalClaims.toLocaleString()}`;
+        if (reserves < 0) {
+            reserveCard.classList.add('alert');
+        }
+    }
+
+    // Run Month Simulation
+    simBtn.onclick = () => {
+        if (isGameOver) return;
+        month++;
+
+        // Get current values
+        const premRate = parseFloat(premiumSlider.value) / 100;
+        const benefitRate = parseFloat(benefitSlider.value) / 100;
+        const gate = parseInt(gateSlider.value);
+
+        // Revenue this month
+        const monthlyPremiumPool = poolSize * medianSalary * premRate;
+        reserves += monthlyPremiumPool;
+        totalPremiums += monthlyPremiumPool;
+
+        // Scenario-based Unemployment Probability
+        let p = 0.032; // Default baseline 3.2%
+        let econState = "Baseline Economy (3.2% Unemployment)";
+        
+        const roll = Math.random();
+        if (roll > 0.85) {
+            p = 0.065; // Downturn
+            econState = "⚠️ Downturn Scenario! (6.5% Unemployment)";
+        } else if (roll > 0.95) {
+            p = 0.11;  // Severe Shock
+            econState = "🚨 SEVERE SHOCK EVENT! (11% Unemployment)";
+        }
+
+        // Adjust probability based on waiting gate (longer gate reduces claims slightly)
+        const gateEffect = (4 - gate) * 0.003; 
+        const adjustedP = Math.max(0.01, p + gateEffect);
+
+        // Run Binomial claims simulation
+        const claims = simulateClaims(poolSize, adjustedP);
+        const payoutPerClaim = medianSalary * benefitRate;
+        const totalPayoutThisMonth = claims * payoutPerClaim;
+
+        reserves -= totalPayoutThisMonth;
+        totalClaims += totalPayoutThisMonth;
+
+        log(`[Month ${month}] ${econState}`);
+        log(`Collected: +HK$${monthlyPremiumPool.toLocaleString()}`);
+        log(`Claims: ${claims} | Paid out: -HK$${totalPayoutThisMonth.toLocaleString()}`);
+        log(`Current Reserves: HK$${reserves.toLocaleString()}`);
+        log(`-----------------------------------------------`);
+
+        updateDisplay();
+
+        // Game over conditions
+        if (reserves < 0) {
+            log("❌ BANKRUPT! Your fund ran out of capital. Your pricing was too low, or benefits were too generous for the risk!");
+            isGameOver = true;
+            simBtn.disabled = true;
+        } else if (month >= 12) {
+            log("🎉 SUCCESS! Your plan survived 12 months. You balanced corporate pricing with social impact perfectly.");
+            isGameOver = true;
+            simBtn.disabled = true;
+        }
+    };
+
+    resetBtn.onclick = resetGame;
+    resetGame();
+</script>
+
+</body>
+</html>
